@@ -1,0 +1,1127 @@
+<!DOCTYPE html>
+<html lang="zh-Hant">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Scratch 運算積木挑戰</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Noto+Sans+TC:wght@400;500;700;900&display=swap" rel="stylesheet">
+<script src="https://cdnjs.cloudflare.com/ajax/libs/xlsx/0.18.5/xlsx.full.min.js"></script>
+<style>
+  * { box-sizing: border-box; margin: 0; padding: 0; }
+
+  body {
+    font-family: 'Noto Sans TC', "PingFang TC", "Microsoft JhengHei", system-ui, sans-serif;
+    background:
+      radial-gradient(circle at 10% 0%, #FFE8C7 0%, transparent 40%),
+      radial-gradient(circle at 90% 100%, #C7E8FF 0%, transparent 40%),
+      #FFF9EC;
+    min-height: 100vh;
+    color: #1F2937;
+    line-height: 1.6;
+  }
+
+  #app { min-height: 100vh; }
+
+  /* ── Scratch Block Styles ───────────────────── */
+  .blk {
+    display: inline-flex;
+    align-items: center;
+    color: #FFFFFF;
+    font-weight: 500;
+    font-size: 14px;
+    padding: 4px 10px;
+    border-radius: 999px;
+    margin: 2px;
+    box-shadow: 0 1px 0 rgba(0,0,0,0.15);
+    line-height: 1.5;
+    vertical-align: middle;
+  }
+  .blk-op {
+    background: #59C059;
+    border: 1.5px solid #389438;
+  }
+  .blk-var {
+    background: #FF8C1A;
+    border: 1.5px solid #DB6E00;
+    font-weight: 700;
+    font-size: 12px;
+    padding: 3px 8px;
+  }
+  .blk-sense {
+    background: #5CB1D6;
+    border: 1.5px solid #2E8EB8;
+    font-weight: 700;
+    font-size: 12px;
+    padding: 3px 8px;
+  }
+  .blk-bool {
+    background: #59C059;
+    color: #FFFFFF;
+    font-weight: 500;
+    font-size: 14px;
+    padding: 4px 14px;
+    margin: 2px;
+    display: inline-flex;
+    align-items: center;
+    clip-path: polygon(10px 0, calc(100% - 10px) 0, 100% 50%, calc(100% - 10px) 100%, 10px 100%, 0 50%);
+    filter: drop-shadow(0 1px 0 #389438);
+    line-height: 1.5;
+    vertical-align: middle;
+  }
+  .blk-input {
+    display: inline-block;
+    background: #FFFFFF;
+    color: #1F2937;
+    font-weight: 700;
+    font-size: 12px;
+    padding: 1px 7px;
+    border-radius: 999px;
+    margin: 0 3px;
+    border: 1px solid rgba(0,0,0,0.15);
+    min-width: 18px;
+    text-align: center;
+    line-height: 1.4;
+  }
+  .hl {
+    background: #FEF08A;
+    padding: 0 4px;
+    font-weight: 700;
+    border-radius: 4px;
+  }
+
+  /* ── Card / Panel ──────────────────────────── */
+  .card {
+    background: #FFFFFF;
+    border: 3px solid #1F2937;
+    border-radius: 24px;
+    padding: 28px;
+  }
+  .card-shadow { box-shadow: 8px 8px 0 #1F2937; }
+  .card-orange-shadow { box-shadow: 8px 8px 0 #F97316; }
+
+  /* ── Buttons ───────────────────────────────── */
+  .btn {
+    border: 2px solid #1F2937;
+    border-radius: 12px;
+    padding: 12px 20px;
+    font-weight: 700;
+    font-size: 16px;
+    cursor: pointer;
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    gap: 6px;
+    transition: transform 0.1s;
+    font-family: inherit;
+  }
+  .btn:active { transform: translate(2px, 2px); }
+  .btn-primary {
+    background: #F97316;
+    color: #FFFFFF;
+    box-shadow: 4px 4px 0 #1F2937;
+  }
+  .btn-primary:disabled {
+    background: #9CA3AF;
+    box-shadow: none;
+    cursor: not-allowed;
+  }
+  .btn-secondary {
+    background: #FFFFFF;
+    color: #1F2937;
+    box-shadow: 4px 4px 0 #1F2937;
+  }
+  .btn-success {
+    background: #16A34A;
+    color: #FFFFFF;
+    box-shadow: 4px 4px 0 #1F2937;
+  }
+  .btn-danger {
+    background: #DC2626;
+    color: #FFFFFF;
+    box-shadow: 4px 4px 0 #1F2937;
+  }
+  .btn-ghost {
+    background: transparent;
+    border: none;
+    box-shadow: none;
+    color: #6B7280;
+    text-decoration: underline;
+    padding: 8px 12px;
+    font-size: 14px;
+  }
+  .btn-ghost:hover { color: #1F2937; }
+
+  /* ── Start Screen ──────────────────────────── */
+  .center-screen {
+    min-height: 100vh;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    padding: 20px;
+  }
+  .start-card {
+    max-width: 460px;
+    width: 100%;
+  }
+  .cat-emoji {
+    font-size: 64px;
+    text-align: center;
+    margin-bottom: 12px;
+    animation: bounce 2s infinite;
+  }
+  @keyframes bounce {
+    0%, 100% { transform: translateY(0); }
+    50% { transform: translateY(-10px); }
+  }
+  .title {
+    font-size: 32px;
+    font-weight: 900;
+    text-align: center;
+    margin-bottom: 12px;
+  }
+  .subtitle-tag {
+    display: inline-block;
+    background: #FFE066;
+    border: 2px solid #1F2937;
+    padding: 4px 14px;
+    font-weight: 900;
+    font-size: 16px;
+  }
+  .subtitle-row { text-align: center; margin-bottom: 12px; }
+  .subtitle-text {
+    text-align: center;
+    color: #6B7280;
+    font-style: italic;
+    font-size: 14px;
+    margin-bottom: 24px;
+  }
+  .form-label {
+    display: block;
+    font-weight: 700;
+    margin-bottom: 8px;
+    font-size: 14px;
+    color: #374151;
+  }
+  .form-input {
+    width: 100%;
+    padding: 12px 16px;
+    border: 2px solid #1F2937;
+    border-radius: 12px;
+    font-size: 18px;
+    background: #FFF7ED;
+    outline: none;
+    font-family: inherit;
+  }
+  .form-input:focus { background: #FFFFFF; }
+
+  .legend {
+    margin-top: 24px;
+    padding-top: 20px;
+    border-top: 2px dashed #D1D5DB;
+  }
+  .legend-title {
+    font-size: 12px;
+    color: #6B7280;
+    text-align: center;
+    font-weight: 700;
+    margin-bottom: 8px;
+  }
+  .legend-blocks {
+    display: flex;
+    gap: 8px;
+    justify-content: center;
+    flex-wrap: wrap;
+  }
+
+  /* ── Quiz Screen ───────────────────────────── */
+  .quiz-container {
+    max-width: 760px;
+    margin: 0 auto;
+    padding: 20px;
+  }
+  .quiz-topbar {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    margin-bottom: 12px;
+    font-size: 14px;
+  }
+  .quiz-topbar .name { font-weight: 900; }
+  .progress-dots {
+    display: flex;
+    gap: 4px;
+    margin-bottom: 20px;
+  }
+  .dot {
+    flex: 1;
+    height: 8px;
+    border-radius: 999px;
+    background: #E5E7EB;
+    cursor: pointer;
+    border: none;
+    padding: 0;
+  }
+  .dot.current { background: #F97316; }
+  .dot.answered { background: #59C059; }
+
+  .topic-row {
+    display: flex;
+    flex-wrap: wrap;
+    align-items: center;
+    gap: 8px;
+    margin-bottom: 12px;
+  }
+  .topic-tag {
+    background: #FFE066;
+    border: 2px solid #1F2937;
+    padding: 2px 12px;
+    font-weight: 900;
+    font-size: 14px;
+    border-radius: 4px;
+  }
+  .q-title {
+    font-size: 22px;
+    font-weight: 900;
+  }
+  .scenario {
+    font-size: 16px;
+    line-height: 1.7;
+    margin-bottom: 24px;
+    color: #374151;
+  }
+  .options {
+    display: flex;
+    flex-direction: column;
+    gap: 10px;
+  }
+  .option {
+    display: flex;
+    align-items: flex-start;
+    gap: 12px;
+    padding: 14px 16px;
+    background: #FAFAF7;
+    border: 2px solid #E5E7EB;
+    border-radius: 12px;
+    cursor: pointer;
+    transition: all 0.1s;
+    text-align: left;
+    font-family: inherit;
+    width: 100%;
+  }
+  .option:hover { border-color: #FFAB19; background: #FFFBEB; }
+  .option.selected {
+    background: #FEF3C7;
+    border: 3px solid #F97316;
+    box-shadow: 3px 3px 0 #F97316;
+  }
+  .opt-letter {
+    flex-shrink: 0;
+    width: 36px;
+    height: 36px;
+    border-radius: 50%;
+    border: 2px solid #1F2937;
+    background: #FFFFFF;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    font-weight: 900;
+    font-size: 16px;
+    margin-top: 2px;
+  }
+  .option.selected .opt-letter {
+    background: #F97316;
+    color: #FFFFFF;
+  }
+  .opt-content {
+    flex: 1;
+    display: flex;
+    flex-wrap: wrap;
+    align-items: center;
+    gap: 4px;
+    padding-top: 4px;
+  }
+  .hint {
+    margin-top: 18px;
+    padding: 10px 14px;
+    background: #FFFBEB;
+    border-left: 4px solid #FFAB19;
+    border-radius: 6px;
+    font-size: 14px;
+    color: #78350F;
+    font-style: italic;
+  }
+  .nav-buttons {
+    display: flex;
+    justify-content: space-between;
+    gap: 12px;
+    margin-top: 20px;
+  }
+
+  /* ── Results Screen ───────────────────────── */
+  .results-container { max-width: 760px; margin: 0 auto; padding: 20px; }
+  .hero {
+    text-align: center;
+    padding: 32px;
+  }
+  .hero-emoji { font-size: 72px; margin-bottom: 12px; }
+  .hero-msg { font-size: 18px; color: #6B7280; margin-bottom: 8px; }
+  .hero-msg .name-strong { font-weight: 900; color: #1F2937; }
+  .score-display {
+    display: flex;
+    align-items: baseline;
+    justify-content: center;
+    gap: 8px;
+    margin: 12px 0;
+  }
+  .score-num { font-size: 80px; font-weight: 900; color: #F97316; line-height: 1; }
+  .score-total { font-size: 32px; font-weight: 700; color: #9CA3AF; }
+  .medal {
+    display: inline-block;
+    background: #FFE066;
+    border: 2px solid #1F2937;
+    padding: 8px 20px;
+    border-radius: 999px;
+    font-weight: 900;
+    font-size: 18px;
+  }
+  .meta-info { margin-top: 14px; font-size: 13px; color: #9CA3AF; }
+
+  .breakdown {
+    margin-top: 20px;
+    padding: 24px;
+  }
+  .breakdown h2 {
+    font-size: 22px;
+    font-weight: 900;
+    margin-bottom: 16px;
+  }
+  .review-item {
+    padding: 14px;
+    border-radius: 12px;
+    margin-bottom: 10px;
+    display: flex;
+    gap: 12px;
+  }
+  .review-item.correct { background: #F0FDF4; border: 2px solid #86EFAC; }
+  .review-item.wrong { background: #FEF2F2; border: 2px solid #FCA5A5; }
+  .check-circle {
+    flex-shrink: 0;
+    width: 32px;
+    height: 32px;
+    border-radius: 50%;
+    color: #FFFFFF;
+    font-weight: 900;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    font-size: 18px;
+  }
+  .check-circle.ok { background: #22C55E; }
+  .check-circle.no { background: #EF4444; }
+  .review-body { flex: 1; min-width: 0; }
+  .review-head {
+    display: flex;
+    flex-wrap: wrap;
+    align-items: baseline;
+    gap: 8px;
+    margin-bottom: 6px;
+  }
+  .review-head strong { font-weight: 900; }
+  .small-tag {
+    background: #FFE066;
+    padding: 2px 8px;
+    font-size: 12px;
+    font-weight: 700;
+    border-radius: 4px;
+  }
+  .your-ans { font-size: 14px; margin-bottom: 6px; }
+  .your-ans .ok-text { color: #15803D; font-weight: 700; }
+  .your-ans .no-text { color: #DC2626; font-weight: 700; text-decoration: line-through; }
+  .your-ans .correct-text { color: #15803D; font-weight: 700; }
+  .explanation {
+    font-size: 12px;
+    color: #6B7280;
+    font-style: italic;
+    line-height: 1.6;
+  }
+  .results-actions {
+    display: flex;
+    flex-direction: column;
+    gap: 10px;
+    margin-top: 20px;
+  }
+  @media (min-width: 640px) {
+    .results-actions { flex-direction: row; }
+    .results-actions .btn { flex: 1; }
+  }
+
+  /* ── Records Screen ─────────────────────── */
+  .records-container { max-width: 960px; margin: 0 auto; padding: 20px; }
+  .records-header {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    margin-bottom: 20px;
+  }
+  .records-header h1 { font-size: 22px; font-weight: 900; }
+  .empty {
+    text-align: center;
+    padding: 60px 20px;
+  }
+  .empty-emoji { font-size: 56px; margin-bottom: 12px; }
+
+  .records-table-wrap { overflow-x: auto; }
+  table.records {
+    width: 100%;
+    border-collapse: collapse;
+  }
+  table.records thead {
+    background: #FFE066;
+    border-bottom: 3px solid #1F2937;
+  }
+  table.records th {
+    padding: 12px;
+    text-align: left;
+    font-weight: 900;
+    font-size: 14px;
+    white-space: nowrap;
+  }
+  table.records th.center { text-align: center; }
+  table.records td {
+    padding: 12px;
+    border-bottom: 1px solid #E5E7EB;
+    font-size: 14px;
+  }
+  table.records td.center { text-align: center; }
+  table.records tbody tr:hover { background: #FFFBEB; }
+  .pct-pill {
+    display: inline-block;
+    padding: 2px 10px;
+    border-radius: 999px;
+    color: #FFFFFF;
+    font-weight: 700;
+    font-size: 13px;
+  }
+
+  .records-actions {
+    display: flex;
+    flex-direction: column;
+    gap: 10px;
+    margin-top: 16px;
+  }
+  @media (min-width: 640px) {
+    .records-actions { flex-direction: row; }
+    .records-actions .grow { flex: 1; }
+  }
+
+  .footer-note {
+    text-align: center;
+    color: #9CA3AF;
+    font-size: 11px;
+    font-style: italic;
+    margin-top: 20px;
+  }
+</style>
+</head>
+<body>
+
+<div id="app"></div>
+
+<script>
+// ── Storage abstraction (works in artifact mode + offline) ─────────
+async function getRecords() {
+  // Try window.storage (artifact mode)
+  if (typeof window.storage !== 'undefined' && window.storage.get) {
+    try {
+      const r = await window.storage.get('quiz_records', true);
+      return r ? JSON.parse(r.value) : [];
+    } catch (e) {
+      return [];
+    }
+  }
+  // Fallback to localStorage (downloaded mode)
+  try {
+    const r = localStorage.getItem('quiz_records');
+    return r ? JSON.parse(r) : [];
+  } catch (e) { return []; }
+}
+
+async function setRecords(records) {
+  const data = JSON.stringify(records);
+  if (typeof window.storage !== 'undefined' && window.storage.set) {
+    try {
+      await window.storage.set('quiz_records', data, true);
+      return;
+    } catch (e) { console.error(e); }
+  }
+  try {
+    localStorage.setItem('quiz_records', data);
+  } catch (e) { console.error(e); }
+}
+
+async function clearRecords() {
+  if (typeof window.storage !== 'undefined' && window.storage.delete) {
+    try {
+      await window.storage.delete('quiz_records', true);
+      return true;
+    } catch (e) {}
+  }
+  try {
+    localStorage.removeItem('quiz_records');
+    return true;
+  } catch (e) { return false; }
+}
+
+// ── Block builders (for HTML strings) ─────────
+const op    = (c) => `<span class="blk blk-op">${c}</span>`;
+const vr    = (c) => `<span class="blk blk-var">${c}</span>`;
+const sn    = (c) => `<span class="blk blk-sense">${c}</span>`;
+const bo    = (c) => `<span class="blk-bool">${c}</span>`;
+const inp   = (c) => `<span class="blk-input">${c}</span>`;
+const hl    = (c) => `<span class="hl">${c}</span>`;
+
+// ── Question Q8 nested blocks (built up cleanly) ─────────
+const q8_layer4 = op(`組合 ${vr('年齡')} 和 ${inp('歲')}`);
+const q8_layer3 = op(`組合 ${inp('，今年')} 和 ${q8_layer4}`);
+const q8_layer2 = op(`組合 ${vr('名字')} 和 ${q8_layer3}`);
+const q8_layer1 = op(`組合 ${inp('我叫')} 和 ${q8_layer2}`);
+
+// ── Questions ─────────
+const questions = [
+  {
+    topic: '大於、小於、等於',
+    title: '發燒警報器',
+    icon: '🌡️',
+    scenario: `小華要做一個體溫警報器：當體溫${hl('「超過 37.5 度」')}就讓角色說「發燒了！」。下列哪個積木組合是正確的？`,
+    options: [
+      { letter: 'A', html: bo(`體溫 &lt; ${inp('37.5')}`) },
+      { letter: 'B', html: bo(`體溫 &gt; ${inp('37.5')}`) },
+      { letter: 'C', html: bo(`體溫 = ${inp('37.5')}`) },
+      { letter: 'D', html: bo(`${inp('37.5')} &gt; 體溫`) },
+    ],
+    correct: 'B',
+    explanation: '「超過」就是「大於 (>)」，注意數字的方向不能反',
+  },
+  {
+    topic: '或、且',
+    title: '海盜船檢查員',
+    icon: '🎢',
+    scenario: `海盜船規定：「身高${hl('大於')}120 公分${hl('而且')}年齡${hl('大於')}8 歲」才能搭乘。下列哪個積木組合正確？`,
+    options: [
+      { letter: 'A', html: bo('(身高 &gt; 120) 或 (年齡 &gt; 8)') },
+      { letter: 'B', html: bo('(身高 &lt; 120) 且 (年齡 &lt; 8)') },
+      { letter: 'C', html: bo('(身高 &gt; 120) 且 (年齡 &gt; 8)') },
+      { letter: 'D', html: bo('(身高 = 120) 或 (年齡 = 8)') },
+    ],
+    correct: 'C',
+    explanation: '「而且」=「且 (and)」，兩個條件要同時成立才會 true',
+  },
+  {
+    topic: '加減乘除',
+    title: '手搖飲店結帳機',
+    icon: '🧋',
+    scenario: `奶茶一杯${hl('65 元')}、加珍珠${hl('+10 元')}、買 3 杯打${hl('9 折')}。哪個積木算「3 杯加珍珠的總金額」是對的？`,
+    options: [
+      { letter: 'A', html: op('65 + 10 × 3 × 0.9') },
+      { letter: 'B', html: op('( 65 + 10 ) × 3 × 0.9') },
+      { letter: 'C', html: op('65 × 3 + 10 × 0.9') },
+      { letter: 'D', html: op('65 + ( 10 × 3 ) × 0.9') },
+    ],
+    correct: 'B',
+    explanation: '單價(65) + 加料(10) 要先算，所以括號要包住 → (65+10) × 3 × 0.9',
+    hint: 'Scratch 每個運算積木背後都有「括號」，要照「先算內層」的順序。',
+  },
+  {
+    topic: '隨機數',
+    title: '擲骰子遊戲',
+    icon: '🎲',
+    scenario: `要做擲骰子遊戲，每次顯示${hl('1 到 6 的整數')}。下列哪個設定會「產生小數」（不符合需求）？`,
+    options: [
+      { letter: 'A', html: op(`取 ${inp('1')} 到 ${inp('6')} 之間隨機數`) },
+      { letter: 'B', html: op(`取 ${inp('1')} 到 ${inp('6.0')} 之間隨機數`) },
+      { letter: 'C', html: op(`取 ${inp('1')} 到 ${inp('100')} 之間隨機數`) },
+      { letter: 'D', html: op(`取 ${inp('0')} 到 ${inp('9')} 之間隨機數`) },
+    ],
+    correct: 'B',
+    explanation: '6.0 帶有小數點，會讓整個結果變成兩位小數的隨機數',
+    hint: '兩個數字當中只要有一個有小數點，結果就會帶兩位小數。',
+  },
+  {
+    topic: '餘數',
+    title: '班級分組器',
+    icon: '👥',
+    scenario: `老師要把 30 個學生用座號分成${hl('4 組')}（座號 1→第1組、5→第1組…循環分配）。哪個積木最適合？`,
+    options: [
+      { letter: 'A', html: op('座號 ÷ 4') },
+      { letter: 'B', html: op('座號 × 4') },
+      { letter: 'C', html: op(`座號 除以 ${inp('4')} 的餘數`) },
+      { letter: 'D', html: op('座號 + 4') },
+    ],
+    correct: 'C',
+    explanation: '循環分組一定用「餘數」：座號 % 4 會得到 0,1,2,3 四種結果',
+  },
+  {
+    topic: '四捨五入',
+    title: '考試平均分數',
+    icon: '📝',
+    scenario: `小美三科平均分數是${hl('83.6666…')}，她想顯示「整數的平均分數」。哪個積木正確？`,
+    options: [
+      { letter: 'A', html: op('絕對值 ( 83.66 )') },
+      { letter: 'B', html: op('四捨五入 83.66') },
+      { letter: 'C', html: op('平方根 ( 83.66 )') },
+      { letter: 'D', html: op('83.66 除以 1 的餘數') },
+    ],
+    correct: 'B',
+    explanation: '小數變整數最直接的方式就是「四捨五入」',
+  },
+  {
+    topic: '數學運算',
+    title: '兩點距離計算',
+    icon: '📏',
+    scenario: `角色 A 在 X = 80，角色 B 在 X = -50，要算它們在 X 軸上的距離（${hl('不能是負數')}）。最適合用哪個積木？`,
+    options: [
+      { letter: 'A', html: op('平方根 ( 80 - (-50) )') },
+      { letter: 'B', html: op('四捨五入 80 - (-50)') },
+      { letter: 'C', html: op('絕對值 ( 80 - (-50) )') },
+      { letter: 'D', html: op('sin ( 80 - (-50) )') },
+    ],
+    correct: 'C',
+    explanation: '「不能是負數」就是絕對值的特性 — 正負都會變成正數',
+  },
+  {
+    topic: '字串組合',
+    title: '自我介紹產生器',
+    icon: '🪪',
+    scenario: `小安想讓角色說：「${hl('我叫小安，今年 12 歲')}」，其中「小安」「12」是變數。哪個積木組合對？`,
+    options: [
+      { letter: 'A', html: op(`組合 ${inp('我叫')} 和 ${inp('名字')}`) },
+      { letter: 'B', html: q8_layer1 },
+      { letter: 'C', html: op(`${vr('名字')} + ${vr('年齡')}`) },
+      { letter: 'D', html: op(`組合 ${vr('名字')} 和 ${vr('年齡')}`) },
+    ],
+    correct: 'B',
+    explanation: '要組合 4 段文字（我叫 / 名字 /「，今年」/ 年齡 / 歲），要把字串組合積木巢狀套 4 次',
+    hint: '要組合多段文字，要把字串組合積木「巢狀」一層一層套起來。',
+  },
+  {
+    topic: '字串資訊',
+    title: '密碼長度檢查器',
+    icon: '🔐',
+    scenario: `使用者輸入「${hl('abc123')}」，要判斷密碼有幾個字。哪個積木會回傳「${hl('6')}」？`,
+    options: [
+      { letter: 'A', html: op(`取 ${inp('1')} 字 從 ${inp('abc123')}`) },
+      { letter: 'B', html: op(`${inp('abc123')} 的長度`) },
+      { letter: 'C', html: bo(`${inp('abc123')} 包含 ${inp('a')} ?`) },
+      { letter: 'D', html: op(`${inp('abc123')} ÷ 6`) },
+    ],
+    correct: 'B',
+    explanation: '字數 = 字串長度積木。A 只取出第 1 個字 (a)，C 是判斷有沒有 a，都不對',
+  },
+  {
+    topic: '字串包含',
+    title: 'VIP 識別系統',
+    icon: '🚪',
+    scenario: `當使用者輸入的姓名${hl('包含「王」')}這個字時，要說「王董您好」。哪個積木組合正確？`,
+    options: [
+      { letter: 'A', html: bo(`${sn('回答')} = ${inp('王')}`) },
+      { letter: 'B', html: bo(`${sn('回答')} &gt; ${inp('王')}`) },
+      { letter: 'C', html: bo(`${sn('回答')} 包含 ${inp('王')} ?`) },
+      { letter: 'D', html: bo(`${op('回答 的長度')} = ${inp('1')}`) },
+    ],
+    correct: 'C',
+    explanation: '「等於」要完全相同才成立（如「王」），「包含」只要該字出現就成立（如「王小明」也通過）',
+    hint: '「等於」要完全相同才成立，「包含」只要該字出現過就成立。',
+  },
+];
+
+// ── State ─────────
+const state = {
+  screen: 'start',
+  name: '',
+  currentQ: 0,
+  answers: {},
+  startTime: null,
+  currentResult: null,
+  records: [],
+};
+
+// ── Render Functions ─────────
+function escapeHtml(s) {
+  return String(s).replace(/[&<>"']/g, c => ({
+    '&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'
+  }[c]));
+}
+
+function renderStart() {
+  const hasRecords = state.records.length > 0;
+  return `
+    <div class="center-screen">
+      <div class="card card-shadow start-card">
+        <div class="cat-emoji">🐱</div>
+        <h1 class="title">Scratch 運算積木</h1>
+        <div class="subtitle-row"><span class="subtitle-tag">10 題具象化挑戰</span></div>
+        <p class="subtitle-text">把運算邏輯變成你能拼起來的拼圖</p>
+
+        <label class="form-label" for="nameInput">👤 請輸入你的名字</label>
+        <input type="text" id="nameInput" class="form-input" placeholder="例：王小明" maxlength="20" value="${escapeHtml(state.name)}" autofocus>
+
+        <button id="startBtn" class="btn btn-primary" style="width:100%; margin-top: 16px; padding: 14px; font-size: 18px;" ${state.name.trim() ? '' : 'disabled'}>
+          開始挑戰 →
+        </button>
+
+        ${hasRecords ? `<button id="viewRecordsBtn" class="btn btn-ghost" style="width:100%; margin-top: 8px;">📊 查看作答紀錄 (${state.records.length} 筆)</button>` : ''}
+
+        <div class="legend">
+          <p class="legend-title">積木顏色對照</p>
+          <div class="legend-blocks">
+            ${op('運算')}
+            ${vr('變數')}
+            ${sn('偵測')}
+            ${inp('輸入欄')}
+          </div>
+        </div>
+
+        <p class="footer-note" style="margin-top: 20px;">ⓘ 你的成績會儲存下來，老師可下載 Excel 查看</p>
+      </div>
+    </div>
+  `;
+}
+
+function renderQuiz() {
+  const q = questions[state.currentQ];
+  const isLast = state.currentQ === questions.length - 1;
+  const allAnswered = questions.every((_, i) => state.answers[i]);
+  const currentAns = state.answers[state.currentQ];
+
+  const dots = questions.map((_, i) => {
+    const cls = i === state.currentQ ? 'current' : (state.answers[i] ? 'answered' : '');
+    return `<button class="dot ${cls}" data-jump="${i}" title="第 ${i+1} 題"></button>`;
+  }).join('');
+
+  const optionsHtml = q.options.map(opt => `
+    <button class="option ${currentAns === opt.letter ? 'selected' : ''}" data-letter="${opt.letter}">
+      <span class="opt-letter">${opt.letter}</span>
+      <span class="opt-content">${opt.html}</span>
+    </button>
+  `).join('');
+
+  const prevDisabled = state.currentQ === 0;
+  const finalBtnHtml = isLast
+    ? `<button id="submitBtn" class="btn btn-primary" data-all-answered="${allAnswered}">送出答案 ✨</button>`
+    : `<button id="nextBtn" class="btn ${currentAns ? 'btn-primary' : 'btn-secondary'}">下一題 →</button>`;
+
+  return `
+    <div class="quiz-container">
+      <div class="quiz-topbar">
+        <span><span style="color:#6B7280;">挑戰者：</span><span class="name">${escapeHtml(state.name)}</span></span>
+        <span style="font-weight:900;">第 ${state.currentQ + 1} / ${questions.length} 題</span>
+      </div>
+
+      <div class="progress-dots">${dots}</div>
+
+      <div class="card card-shadow">
+        <div class="topic-row">
+          <span class="topic-tag">${q.topic}</span>
+          <span class="q-title">${q.title} ${q.icon}</span>
+        </div>
+        <p class="scenario">${q.scenario}</p>
+        <div class="options">${optionsHtml}</div>
+        ${q.hint ? `<div class="hint">💡 ${q.hint}</div>` : ''}
+      </div>
+
+      <div class="nav-buttons">
+        <button id="prevBtn" class="btn btn-secondary" ${prevDisabled ? 'disabled style="opacity:0.5;cursor:not-allowed;"' : ''}>← 上一題</button>
+        ${finalBtnHtml}
+      </div>
+    </div>
+  `;
+}
+
+function renderResults() {
+  const r = state.currentResult;
+  const pct = Math.round(r.score / 10 * 100);
+  let emoji = '💪', message = '再接再厲！', medal = '🌱';
+  if (pct >= 90) { emoji = '🏆'; message = '完美無瑕！運算大師'; medal = '🥇'; }
+  else if (pct >= 70) { emoji = '🎉'; message = '表現優秀！'; medal = '🥈'; }
+  else if (pct >= 50) { emoji = '👍'; message = '不錯喔，繼續努力！'; medal = '🥉'; }
+
+  const reviewHtml = questions.map((q, i) => {
+    const ans = r.answers[i];
+    const isCorrect = ans === q.correct;
+    return `
+      <div class="review-item ${isCorrect ? 'correct' : 'wrong'}">
+        <div class="check-circle ${isCorrect ? 'ok' : 'no'}">${isCorrect ? '✓' : '✗'}</div>
+        <div class="review-body">
+          <div class="review-head">
+            <strong>第 ${i+1} 題</strong>
+            <span class="small-tag">${q.topic}</span>
+            <span style="font-size:14px;color:#374151;">${q.title} ${q.icon}</span>
+          </div>
+          <div class="your-ans">
+            <span style="color:#6B7280;">你的答案：</span>
+            <span class="${isCorrect ? 'ok-text' : 'no-text'}">${ans || '(未作答)'}</span>
+            ${!isCorrect ? `<span style="color:#6B7280; margin-left:8px;">正解：</span><span class="correct-text">${q.correct}</span>` : ''}
+          </div>
+          <p class="explanation">💡 ${q.explanation}</p>
+        </div>
+      </div>
+    `;
+  }).join('');
+
+  return `
+    <div class="results-container">
+      <div class="card hero" style="box-shadow: 8px 8px 0 #F97316;">
+        <div class="hero-emoji">${emoji}</div>
+        <p class="hero-msg"><span class="name-strong">${escapeHtml(r.name)}</span>，${message}</p>
+        <div class="score-display">
+          <span class="score-num">${r.score}</span>
+          <span class="score-total">/ 10</span>
+        </div>
+        <div class="medal">${medal} 答對率 ${pct}%</div>
+        <p class="meta-info">用時 ${r.duration} 秒 · ${new Date(r.date).toLocaleString('zh-TW')}</p>
+      </div>
+
+      <div class="card breakdown">
+        <h2>📋 作答詳情</h2>
+        ${reviewHtml}
+      </div>
+
+      <div class="results-actions">
+        <button id="downloadMyBtn" class="btn btn-success">📊 下載我的成績</button>
+        <button id="viewAllBtn" class="btn btn-secondary">👥 所有紀錄</button>
+        <button id="restartBtn" class="btn btn-primary">🔄 再玩一次</button>
+      </div>
+    </div>
+  `;
+}
+
+function renderRecords() {
+  const sorted = [...state.records].sort((a, b) => b.id - a.id);
+  const tableRows = sorted.map((r, idx) => {
+    const pct = Math.round(r.score / 10 * 100);
+    const pctColor = pct >= 90 ? '#16A34A' : pct >= 70 ? '#F97316' : pct >= 50 ? '#EAB308' : '#EF4444';
+    return `
+      <tr>
+        <td style="color:#9CA3AF;">${idx + 1}</td>
+        <td style="white-space:nowrap; font-size:13px;">${new Date(r.date).toLocaleString('zh-TW')}</td>
+        <td style="font-weight:700;">${escapeHtml(r.name)}</td>
+        <td class="center" style="font-weight:700;">${r.score}/10</td>
+        <td class="center"><span class="pct-pill" style="background:${pctColor};">${pct}%</span></td>
+        <td class="center" style="color:#6B7280; font-size:13px;">${r.duration}s</td>
+      </tr>
+    `;
+  }).join('');
+
+  return `
+    <div class="records-container">
+      <div class="records-header">
+        <button id="backBtn" class="btn btn-secondary" style="padding: 8px 16px;">← 返回</button>
+        <h1>📊 所有作答紀錄</h1>
+        <div style="width:80px;"></div>
+      </div>
+
+      ${state.records.length === 0 ? `
+        <div class="card empty">
+          <div class="empty-emoji">📝</div>
+          <p style="color:#6B7280;">還沒有任何作答紀錄</p>
+        </div>
+      ` : `
+        <div class="card card-shadow" style="padding: 0; overflow: hidden;">
+          <div class="records-table-wrap">
+            <table class="records">
+              <thead>
+                <tr>
+                  <th>#</th>
+                  <th>日期時間</th>
+                  <th>姓名</th>
+                  <th class="center">得分</th>
+                  <th class="center">百分比</th>
+                  <th class="center">用時</th>
+                </tr>
+              </thead>
+              <tbody>${tableRows}</tbody>
+            </table>
+          </div>
+        </div>
+
+        <div class="records-actions">
+          <button id="downloadAllBtn" class="btn btn-success grow">📊 下載 Excel (${state.records.length} 筆)</button>
+          <button id="clearBtn" class="btn btn-danger">🗑️ 清除全部</button>
+        </div>
+      `}
+    </div>
+  `;
+}
+
+// ── Excel Export ─────────
+function exportToExcel(records, filename) {
+  const summary = records.map((r, idx) => ({
+    '#': idx + 1,
+    '日期時間': new Date(r.date).toLocaleString('zh-TW'),
+    '姓名': r.name,
+    '得分': `${r.score}/10`,
+    '百分比': `${Math.round(r.score / 10 * 100)}%`,
+    '用時(秒)': r.duration,
+  }));
+
+  const detail = records.map((r, idx) => {
+    const row = {
+      '#': idx + 1,
+      '日期時間': new Date(r.date).toLocaleString('zh-TW'),
+      '姓名': r.name,
+      '得分': r.score,
+    };
+    questions.forEach((q, i) => {
+      const ans = r.answers[i] || '-';
+      row[`Q${i+1}_作答`] = ans;
+      row[`Q${i+1}_正解`] = q.correct;
+      row[`Q${i+1}_對錯`] = ans === q.correct ? '✓' : '✗';
+    });
+    return row;
+  });
+
+  const wb = XLSX.utils.book_new();
+  const ws1 = XLSX.utils.json_to_sheet(summary);
+  ws1['!cols'] = [{wch:5},{wch:20},{wch:15},{wch:8},{wch:8},{wch:10}];
+  const ws2 = XLSX.utils.json_to_sheet(detail);
+  XLSX.utils.book_append_sheet(wb, ws1, '成績總覽');
+  XLSX.utils.book_append_sheet(wb, ws2, '詳細作答');
+  XLSX.writeFile(wb, `${filename}.xlsx`);
+}
+
+// ── Render orchestrator + event delegation ─────────
+function render() {
+  const root = document.getElementById('app');
+  if (state.screen === 'start') root.innerHTML = renderStart();
+  else if (state.screen === 'quiz') root.innerHTML = renderQuiz();
+  else if (state.screen === 'results') root.innerHTML = renderResults();
+  else if (state.screen === 'records') root.innerHTML = renderRecords();
+  attachHandlers();
+}
+
+function attachHandlers() {
+  // ── Start screen ─────────
+  const nameInput = document.getElementById('nameInput');
+  if (nameInput) {
+    nameInput.addEventListener('input', e => {
+      state.name = e.target.value;
+      const btn = document.getElementById('startBtn');
+      if (btn) btn.disabled = !state.name.trim();
+    });
+    nameInput.addEventListener('keydown', e => {
+      if (e.key === 'Enter' && state.name.trim()) handleStart();
+    });
+  }
+  const startBtn = document.getElementById('startBtn');
+  if (startBtn) startBtn.addEventListener('click', handleStart);
+
+  const viewRecordsBtn = document.getElementById('viewRecordsBtn');
+  if (viewRecordsBtn) viewRecordsBtn.addEventListener('click', () => { state.screen = 'records'; render(); });
+
+  // ── Quiz screen ─────────
+  document.querySelectorAll('.dot').forEach(dot => {
+    dot.addEventListener('click', e => {
+      state.currentQ = parseInt(e.currentTarget.dataset.jump);
+      render();
+    });
+  });
+  document.querySelectorAll('.option').forEach(opt => {
+    opt.addEventListener('click', e => {
+      const letter = e.currentTarget.dataset.letter;
+      state.answers = { ...state.answers, [state.currentQ]: letter };
+      render();
+    });
+  });
+  const prevBtn = document.getElementById('prevBtn');
+  if (prevBtn) prevBtn.addEventListener('click', () => {
+    if (state.currentQ > 0) { state.currentQ--; render(); }
+  });
+  const nextBtn = document.getElementById('nextBtn');
+  if (nextBtn) nextBtn.addEventListener('click', () => {
+    if (state.currentQ < questions.length - 1) { state.currentQ++; render(); }
+  });
+  const submitBtn = document.getElementById('submitBtn');
+  if (submitBtn) submitBtn.addEventListener('click', () => {
+    const allAnswered = submitBtn.dataset.allAnswered === 'true';
+    if (!allAnswered && !confirm('還有題目沒作答喔！確定要送出嗎？')) return;
+    handleSubmit();
+  });
+
+  // ── Results screen ─────────
+  const downloadMyBtn = document.getElementById('downloadMyBtn');
+  if (downloadMyBtn) downloadMyBtn.addEventListener('click', () => {
+    exportToExcel([state.currentResult], `${state.currentResult.name}_成績`);
+  });
+  const viewAllBtn = document.getElementById('viewAllBtn');
+  if (viewAllBtn) viewAllBtn.addEventListener('click', () => { state.screen = 'records'; render(); });
+  const restartBtn = document.getElementById('restartBtn');
+  if (restartBtn) restartBtn.addEventListener('click', handleRestart);
+
+  // ── Records screen ─────────
+  const backBtn = document.getElementById('backBtn');
+  if (backBtn) backBtn.addEventListener('click', () => { state.screen = 'start'; render(); });
+  const downloadAllBtn = document.getElementById('downloadAllBtn');
+  if (downloadAllBtn) downloadAllBtn.addEventListener('click', () => {
+    exportToExcel(state.records, '全班成績紀錄');
+  });
+  const clearBtn = document.getElementById('clearBtn');
+  if (clearBtn) clearBtn.addEventListener('click', async () => {
+    if (!confirm('確定要清除所有紀錄嗎？此動作無法復原。')) return;
+    const ok = await clearRecords();
+    if (ok) {
+      state.records = [];
+      render();
+    }
+  });
+}
+
+// ── Handlers ─────────
+function handleStart() {
+  if (!state.name.trim()) return;
+  state.answers = {};
+  state.currentQ = 0;
+  state.startTime = Date.now();
+  state.screen = 'quiz';
+  render();
+}
+
+async function handleSubmit() {
+  const score = questions.reduce(
+    (sum, q, i) => sum + (state.answers[i] === q.correct ? 1 : 0), 0
+  );
+  const duration = Math.round((Date.now() - state.startTime) / 1000);
+  const record = {
+    id: Date.now(),
+    name: state.name.trim(),
+    date: new Date().toISOString(),
+    answers: { ...state.answers },
+    score,
+    duration,
+  };
+  state.currentResult = record;
+  state.records.push(record);
+  await setRecords(state.records);
+  state.screen = 'results';
+  render();
+}
+
+function handleRestart() {
+  state.name = '';
+  state.answers = {};
+  state.currentQ = 0;
+  state.currentResult = null;
+  state.screen = 'start';
+  render();
+}
+
+// ── Boot ─────────
+(async () => {
+  state.records = await getRecords();
+  render();
+})();
+</script>
+
+</body>
+</html>
